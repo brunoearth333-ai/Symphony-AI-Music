@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symphony AI - Music Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons for high-quality SVG icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#0a0a0a',
+                        surface: '#171717',
+                        'surface-hover': '#262626',
+                        primary: '#a855f7', // Purple shade often used in AI tools
+                        'primary-hover': '#9333ea',
+                        text: '#f5f5f5',
+                        'text-muted': '#a3a3a3',
+                        border: '#262626'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Import Inter font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* Custom scrollbar for a sleek look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #262626;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #404040;
+        }
+
+        body {
+            background-color: #0a0a0a;
+            color: #f5f5f5;
+        }
+
+        /* Utility to hide elements smoothly */
+        .hidden-fade {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .show-fade {
+            opacity: 1;
+            pointer-events: auto;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Player progress bar styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #f5f5f5;
+            cursor: pointer;
+            margin-top: -4px;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #262626;
+            border-radius: 2px;
+        }
+        
+        /* Focus state for range */
+        input[type=range]:focus {
+            outline: none;
+        }
+        
+        /* Shimmer effect for loading states */
+        .shimmer {
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(to right, #171717 4%, #262626 25%, #171717 36%);
+            background-size: 1000px 100%;
+        }
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        /* Active navigation indicator */
+        .nav-item.active {
+            color: white;
+            background-color: #262626;
+            font-weight: 500;
+        }
+        .nav-item.active i {
+            color: #a855f7;
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex flex-col md:flex-row overflow-hidden font-sans antialiased text-sm md:text-base">
+
+    <!-- Sidebar -->
+    <aside class="w-full md:w-64 bg-black border-r border-border flex flex-col z-20 transition-all duration-300 md:relative fixed inset-y-0 left-0 transform -translate-x-full md:translate-x-0" id="sidebar">
+        <!-- Logo Area -->
+        <div class="h-16 flex items-center px-6 border-b border-border">
+            <i class="ph-fill ph-waveform text-primary text-2xl mr-2 animate-pulse"></i>
+            <span class="text-xl font-bold tracking-tight">Symphony AI</span>
+            <button id="closeSidebarBtn" class="md:hidden ml-auto text-text-muted hover:text-white">
+                <i class="ph ph-x text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <a href="#" onclick="switchView('home')" class="nav-item active flex items-center px-3 py-2.5 rounded-lg text-text-muted hover:bg-surface hover:text-white transition-colors" id="nav-home">
+                <i class="ph ph-house text-xl mr-3"></i>
+                Home
+            </a>
+            <a href="#" onclick="switchView('explore')" class="nav-item flex items-center px-3 py-2.5 rounded-lg text-text-muted hover:bg-surface hover:text-white transition-colors" id="nav-explore">
+                <i class="ph ph-compass text-xl mr-3"></i>
+                Explore
+            </a>
+            <a href="#" onclick="switchView('create')" class="nav-item flex items-center px-3 py-2.5 rounded-lg text-text-muted hover:bg-surface hover:text-white transition-colors" id="nav-create">
+                <i class="ph ph-magic-wand text-xl mr-3"></i>
+                Create
+            </a>
+            <a href="#" onclick="switchView('library')" class="nav-item flex items-center px-3 py-2.5 rounded-lg text-text-muted hover:bg-surface hover:text-white transition-colors" id="nav-library">
+                <i class="ph ph-books text-xl mr-3"></i>
+                Library
+            </a>
+            
+            <div class="mt-8 mb-2 px-3 text-xs font-semibold text-text-muted uppercase tracking-wider">Playlists</div>
+            <a href="#" class="flex items-center px-3 py-2 rounded-lg text-text-muted hover:bg-surface hover:text-white transition-colors">
+                <i class="ph ph-list-music text-lg mr-3"></i>
+                Liked Songs
+            </a>
+            <a href="#" class="flex items-center px-3 py-2 rounded-lg text-text-muted hover:bg-surface hover:text-white transition-colors">
+                <i class="ph ph-folder text-lg mr-3"></i>
+                My Creations
+            </a>
+        </nav>
+
+        <!-- User Info / Credits -->
+        <div class="p-4 border-t border-border mt-auto">
+            <div class="bg-surface rounded-lg p-3 flex flex-col gap-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-medium text-text-muted">Credits</span>
+                    <span class="text-sm font-bold text-primary">1,250 <i class="ph-fill ph-coin text-xs"></i></span>
+                </div>
+                <div class="w-full bg-border rounded-full h-1.5">
+                    <div class="bg-gradient-to-r from-primary to-blue-500 h-1.5 rounded-full" style="width: 45%"></div>
+                </div>
+                <button class="w-full mt-2 bg-white/5 hover:bg-white/10 text-white text-xs font-medium py-1.5 rounded transition-colors">Upgrade Plan</button>
+            </div>
+            
+            <div class="mt-4 flex items-center gap-3 cursor-pointer hover:bg-surface p-2 rounded-lg transition-colors">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white font-bold">
+                    U
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-white truncate">User Name</p>
+                    <p class="text-xs text-text-muted truncate">Free Tier</p>
+                </div>
+                <i class="ph ph-caret-down text-text-muted"></i>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-10 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full bg-background relative overflow-hidden">
+        
+        <!-- Topbar -->
+        <header class="h-16 border-b border-border flex items-center justify-between px-4 md:px-8 shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+            <div class="flex items-center gap-4">
+                <button id="mobileMenuBtn" class="md:hidden text-text hover:text-primary transition-colors" onclick="toggleSidebar()">
+                    <i class="ph ph-list text-2xl"></i>
+                </button>
+                <div class="relative hidden sm:block">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted"></i>
+                    <input type="text" placeholder="Search songs, artists, prompts..." class="bg-surface border border-border text-white text-sm rounded-full focus:ring-1 focus:ring-primary focus:border-primary block w-64 pl-10 p-2 transition-all outline-none placeholder-text-muted">
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button class="w-10 h-10 rounded-full bg-surface hover:bg-surface-hover flex items-center justify-center text-text transition-colors">
+                    <i class="ph ph-bell text-lg"></i>
+                </button>
+                <button onclick="switchView('create')" class="hidden md:flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-full font-medium transition-colors shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                    <i class="ph ph-plus-circle text-lg"></i>
+                    Create
+                </button>
+            </div>
+        </header>
+
+        <!-- Scrollable Views Container -->
+        <div class="flex-1 overflow-y-auto pb-24" id="mainScrollArea">
+            
+            <!-- HOME VIEW -->
+            <div id="view-home" class="view-section p-4 md:p-8 animate-fade-in block">
+                
+                <!-- Hero Section / Call to Action -->
+                <div class="w-full bg-gradient-to-br from-surface to-surface-hover rounded-2xl p-6 md:p-10 mb-8 border border-border relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+                    <!-- Decorative element -->
+                    <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl group-hover:bg-primary/30 transition-all duration-700"></div>
+                    
+                    <div class="relative z-10 max-w-2xl">
+                        <span class="inline-block px-3 py-1 bg-primary/20 text-primary text-xs font-semibold rounded-full mb-4 border border-primary/30">New Model v3.0</span>
+                        <h1 class="text-3xl md:text-5xl font-bold mb-4 tracking-tight">Turn your imagination into music.</h1>
+                        <p class="text-text-muted text-base md:text-lg mb-6">Describe the song you want to hear, and our AI will generate a complete track with vocals, instruments, and high-quality production in seconds.</p>
+                        
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <div class="relative flex-1">
+                                <input type="text" id="quickPromptInput" placeholder="A synthwave track about exploring neon city streets..." class="w-full bg-background border border-border text-white rounded-full py-3 px-5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-inner">
+                            </div>
+                            <button onclick="generateFromQuickPrompt()" class="bg-white text-black hover:bg-gray-200 font-semibold py-3 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shrink-0">
+                                <i class="ph-fill ph-sparkle text-primary"></i>
+                                Generate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trending Section -->
+                <div class="mb-8">
+                    <div class="flex justify-between items-end mb-4">
+                        <h2 class="text-2xl font-bold tracking-tight">Trending Now</h2>
+                        <a href="#" class="text-sm text-primary hover:text-primary-hover font-medium">See all</a>
+                    </div>
+                    
+                    <!-- Song Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="trendingGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Recent Generations -->
+                <div>
+                    <h2 class="text-2xl font-bold tracking-tight mb-4">Your Recent Creations</h2>
+                    <!-- Song List -->
+                    <div class="space-y-2 flex flex-col" id="recentList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- CREATE VIEW -->
+            <div id="view-create" class="view-section p-4 md:p-8 hidden">
+                <div class="max-w-4xl mx-auto">
+                    <h1 class="text-3xl font-bold mb-2">Create Music</h1>
+                    <p class="text-text-muted mb-8">Craft your unique song by providing prompts, lyrics, and style preferences.</p>
+
+                    <div class="bg-surface rounded-xl border border-border p-5 md:p-6 mb-6">
+                        
+                        <!-- Mode Tabs -->
+                        <div class="flex space-x-1 bg-background p-1 rounded-lg w-fit mb-6 border border-border">
+                            <button class="px-4 py-1.5 rounded-md text-sm font-medium bg-surface text-white shadow-sm" id="tab-custom">Custom Mode</button>
+                            <button class="px-4 py-1.5 rounded-md text-sm font-medium text-text-muted hover:text-white hover:bg-surface/50" id="tab-simple">Simple Mode</button>
+                        </div>
+
+                        <!-- Prompt Input -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-white mb-2">Song Description (Prompt) <span class="text-red-400">*</span></label>
+                            <textarea id="mainPromptInput" rows="3" class="w-full bg-background border border-border text-white rounded-lg p-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none placeholder-text-muted" placeholder="Describe the genre, mood, instruments, and theme. E.g., 'An upbeat pop-punk song about missing the summer, fast guitar riffs, energetic female vocals'"></textarea>
+                            <div class="flex justify-between mt-2 text-xs text-text-muted">
+                                <span>Be descriptive for better results.</span>
+                                <span><span id="promptLength">0</span>/500</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <!-- Lyrics Section -->
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="block text-sm font-medium text-white">Lyrics</label>
+                                    <button class="text-xs text-primary hover:text-primary-hover font-medium flex items-center gap-1">
+                                        <i class="ph ph-magic-wand"></i> Auto-generate
+                                    </button>
+                                </div>
+                                <textarea rows="6" class="w-full bg-background border border-border text-white rounded-lg p-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none placeholder-text-muted font-mono text-sm leading-relaxed" placeholder="[Verse 1]&#10;Walking down these empty streets&#10;Nothing but the sound of my own feet&#10;&#10;[Chorus]&#10;But I know I'll find my way&#10;To a brighter, better day..."></textarea>
+                                <p class="mt-1 text-xs text-text-muted">Leave blank for instrumental, or provide your own text. Use tags like [Chorus] or [Guitar Solo].</p>
+                            </div>
+
+                            <!-- Settings Section -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-white mb-2">Model Version</label>
+                                    <select class="w-full bg-background border border-border text-white rounded-lg p-3 focus:outline-none focus:border-primary appearance-none">
+                                        <option>Symphony v3.0 (Highest Quality)</option>
+                                        <option>Symphony v2.5 (Fastest)</option>
+                                        <option>Symphony Instrumental</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-white mb-2">Duration</label>
+                                    <div class="flex items-center gap-4 bg-background border border-border rounded-lg p-3">
+                                        <input type="range" min="30" max="240" value="120" class="w-full accent-primary" id="durationSlider">
+                                        <span class="text-sm font-mono text-white w-12 text-right" id="durationDisplay">2:00</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-white mb-2">Tags / Styles (Optional)</label>
+                                    <div class="flex flex-wrap gap-2 mb-2" id="selectedTags">
+                                        <span class="bg-surface-hover border border-border px-2 py-1 rounded text-xs flex items-center gap-1">Pop <i class="ph ph-x cursor-pointer hover:text-red-400"></i></span>
+                                        <span class="bg-surface-hover border border-border px-2 py-1 rounded text-xs flex items-center gap-1">Upbeat <i class="ph ph-x cursor-pointer hover:text-red-400"></i></span>
+                                    </div>
+                                    <input type="text" placeholder="Type a tag and press Enter..." class="w-full bg-background border border-border text-white text-sm rounded-lg p-2 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Bar -->
+                        <div class="flex items-center justify-between border-t border-border pt-5 mt-2">
+                            <div class="flex items-center gap-2 text-sm text-text-muted">
+                                Cost: <span class="text-primary font-bold">10 <i class="ph-fill ph-coin text-xs"></i></span>
+                            </div>
+                            <button id="generateBtn" onclick="simulateGeneration()" class="bg-white text-black hover:bg-gray-200 font-bold py-2.5 px-8 rounded-full transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95">
+                                <i class="ph-fill ph-music-notes"></i>
+                                Generate Song
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Generation Status Area (Hidden by default) -->
+                    <div id="generationStatus" class="bg-surface rounded-xl border border-primary/50 p-5 hidden animate-fade-in relative overflow-hidden">
+                        <!-- Animated background pulse -->
+                        <div class="absolute inset-0 bg-primary/5 animate-pulse"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-center justify-center py-6 text-center">
+                            <div class="relative w-16 h-16 mb-4">
+                                <svg class="animate-spin w-full h-full text-primary/30" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="text-primary" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <i class="ph-fill ph-magic-wand absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xl text-white"></i>
+                            </div>
+                            <h3 class="text-lg font-bold mb-1">Composing your masterpiece...</h3>
+                            <p class="text-sm text-text-muted mb-4" id="genStatusText">Analyzing prompt and structure (15%)</p>
+                            
+                            <div class="w-full max-w-md bg-background rounded-full h-2 mb-2 overflow-hidden border border-border">
+                                <div id="genProgressBar" class="bg-gradient-to-r from-primary to-blue-500 h-full transition-all duration-300" style="width: 15%"></div>
+                            </div>
+                            
+                            <button onclick="cancelGeneration()" class="mt-4 text-xs text-text-muted hover:text-white underline">Cancel</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Result Area (Hidden by default) -->
+                    <div id="generationResult" class="hidden animate-fade-in mt-6">
+                        <h2 class="text-xl font-bold mb-4">Ready to Listen</h2>
+                        <div id="newGeneratedSongContainer">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Explore View (Placeholder) -->
+            <div id="view-explore" class="view-section p-4 md:p-8 hidden">
+                <h1 class="text-3xl font-bold mb-6">Explore</h1>
+                <div class="flex gap-2 overflow-x-auto pb-4 mb-6 custom-scrollbar">
+                    <button class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-full whitespace-nowrap">For You</button>
+                    <button class="bg-primary text-white border border-primary px-4 py-2 rounded-full whitespace-nowrap">Top 100</button>
+                    <button class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-full whitespace-nowrap">Electronic</button>
+                    <button class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-full whitespace-nowrap">Rock</button>
+                    <button class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-full whitespace-nowrap">Ambient</button>
+                    <button class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-full whitespace-nowrap">Lo-Fi</button>
+                    <button class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-full whitespace-nowrap">Vocals Only</button>
+                </div>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="exploreGrid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Library View (Placeholder) -->
+            <div id="view-library" class="view-section p-4 md:p-8 hidden">
+                <h1 class="text-3xl font-bold mb-6">Your Library</h1>
+                <p class="text-text-muted mb-4">View your generated songs, liked tracks, and playlists.</p>
+                <div class="space-y-2 flex flex-col" id="libraryList">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Persistent Audio Player -->
+    <div class="fixed bottom-0 left-0 right-0 h-20 md:h-24 bg-surface border-t border-border z-30 px-4 md:px-6 flex items-center justify-between shadow-[0_-5px_20px_rgba(0,0,0,0.5)] backdrop-blur-md">
+        
+        <!-- Track Info -->
+        <div class="flex items-center gap-3 w-1/3 min-w-[120px]">
+            <div class="w-12 h-12 md:w-14 md:h-14 rounded bg-border relative overflow-hidden group flex-shrink-0 cursor-pointer shadow-md" id="playerCover">
+                <!-- Cover Image set by JS -->
+                <div class="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center">
+                    <i class="ph ph-arrows-out-simple text-white"></i>
+                </div>
+            </div>
+            <div class="flex flex-col min-w-0">
+                <span class="text-sm md:text-base font-semibold text-white truncate hover:underline cursor-pointer" id="playerTitle">Select a track</span>
+                <span class="text-xs text-text-muted truncate" id="playerArtist">Artist</span>
+            </div>
+            <button class="hidden md:block ml-2 text-text-muted hover:text-white">
+                <i class="ph ph-heart text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Player Controls -->
+        <div class="flex flex-col items-center max-w-md w-full px-2 md:px-4">
+            <div class="flex items-center gap-4 md:gap-6 mb-1 md:mb-2">
+                <button class="text-text-muted hover:text-white hidden md:block">
+                    <i class="ph ph-shuffle text-lg"></i>
+                </button>
+                <button class="text-text hover:text-white transition-colors" onclick="prevTrack()">
+                    <i class="ph-fill ph-skip-back text-xl"></i>
+                </button>
+                <button class="w-10 h-10 rounded-full bg-white text-black hover:scale-105 flex items-center justify-center transition-transform" onclick="togglePlay()" id="playPauseBtn">
+                    <i class="ph-fill ph-play text-xl ml-0.5" id="playIcon"></i>
+                </button>
+                <button class="text-text hover:text-white transition-colors" onclick="nextTrack()">
+                    <i class="ph-fill ph-skip-forward text-xl"></i>
+                </button>
+                <button class="text-text-muted hover:text-white hidden md:block">
+                    <i class="ph ph-repeat text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="w-full flex items-center gap-2 text-xs text-text-muted font-mono">
+                <span id="currentTimeDisplay">0:00</span>
+                <input type="range" min="0" max="100" value="0" class="w-full accent-primary h-1 bg-border rounded-full appearance-none outline-none" id="progressBar">
+                <span id="durationTimeDisplay">0:00</span>
+            </div>
+        </div>
+
+        <!-- Extra Controls -->
+        <div class="w-1/3 flex items-center justify-end gap-3 hidden sm:flex">
+            <button class="text-text-muted hover:text-white" title="Lyrics">
+                <i class="ph ph-microphone-stage text-lg"></i>
+            </button>
+            <button class="text-text-muted hover:text-white" title="Download">
+                <i class="ph ph-download-simple text-lg"></i>
+            </button>
+            <div class="flex items-center gap-2 w-24 md:w-32 ml-2">
+                <i class="ph ph-speaker-high text-text-muted text-lg"></i>
+                <input type="range" min="0" max="100" value="80" class="w-full h-1">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock Data for Songs
+        const mockSongs = [
+            { id: 1, title: "Neon Nights", artist: "@synthmaster", genre: "Synthwave / Cyberpunk", duration: "3:14", image: "https://placehold.co/400x400/2a1b3d/d83f87?text=Neon\nNights", tags: ["Synth", "80s", "Upbeat"] },
+            { id: 2, title: "Ethereal Echoes", artist: "@ambient_ai", genre: "Ambient / Chill", duration: "4:05", image: "https://placehold.co/400x400/0f2027/203a43?text=Ethereal", tags: ["Relaxing", "Slow", "No Vocals"] },
+            { id: 3, title: "Rhythm of the Code", artist: "@coder_beats", genre: "Electronic / Tech House", duration: "2:45", image: "https://placehold.co/400x400/141e30/243b55?text=Code\nRhythm", tags: ["House", "Bass", "Dance"] },
+            { id: 4, title: "Acoustic Sunrise", artist: "@folk_tales", genre: "Acoustic / Indie Folk", duration: "3:30", image: "https://placehold.co/400x400/ff7e5f/feb47b?text=Sunrise", tags: ["Guitar", "Vocal", "Warm"] },
+            { id: 5, title: "Galactic Journey", artist: "@space_cadet", genre: "Orchestral / Cinematic", duration: "5:12", image: "https://placehold.co/400x400/000000/434343?text=Galactic", tags: ["Epic", "Strings", "Soundtrack"] },
+            { id: 6, title: "Midnight Jazz", artist: "@smooth_op", genre: "Jazz / Lounge", duration: "4:20", image: "https://placehold.co/400x400/3e5151/decba4?text=Jazz", tags: ["Sax", "Piano", "Chill"] },
+            { id: 7, title: "Punk Rebellion", artist: "@riot_grrrl", genre: "Punk Rock", duration: "2:15", image: "https://placehold.co/400x400/cb2d3e/ef473a?text=Rebel", tags: ["Fast", "Loud", "Aggressive"] },
+            { id: 8, title: "Lo-Fi Study Beats", artist: "@chillhop", genre: "Lo-Fi Hip Hop", duration: "2:55", image: "https://placehold.co/400x400/c94b4b/4b134f?text=Lo-Fi", tags: ["Beats", "Study", "Relax"] }
+        ];
+
+        // State
+        let isPlaying = false;
+        let currentTrackIndex = -1;
+        let playInterval;
+        let currentProgress = 0;
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            renderGrid('trendingGrid', mockSongs.slice(0, 5));
+            renderList('recentList', mockSongs.slice(5, 8));
+            renderGrid('exploreGrid', mockSongs);
+            renderList('libraryList', mockSongs);
+            
+            // Set initial duration text on slider
+            const durSlider = document.getElementById('durationSlider');
+            const durDisplay = document.getElementById('durationDisplay');
+            if(durSlider && durDisplay) {
+                durSlider.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    const mins = Math.floor(val / 60);
+                    const secs = val % 60;
+                    durDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                });
+            }
+
+            // Prompt length counter
+            const promptInput = document.getElementById('mainPromptInput');
+            const promptLength = document.getElementById('promptLength');
+            if(promptInput && promptLength) {
+                promptInput.addEventListener('input', (e) => {
+                    promptLength.textContent = e.target.value.length;
+                    if (e.target.value.length > 450) {
+                        promptLength.classList.add('text-red-400');
+                    } else {
+                        promptLength.classList.remove('text-red-400');
+                    }
+                });
+            }
+        });
+
+        // Navigation Logic
+        function switchView(viewId) {
+            // Update Navigation active state
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${viewId}`).classList.add('active');
+
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('block', 'animate-fade-in');
+            });
+
+            // Show selected view
+            const selectedView = document.getElementById(`view-${viewId}`);
+            selectedView.classList.remove('hidden');
+            selectedView.classList.add('block', 'animate-fade-in');
+            
+            // Scroll to top
+            document.getElementById('mainScrollArea').scrollTop = 0;
+
+            // Close mobile sidebar if open
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // UI Rendering Helpers
+        function createCardHtml(song) {
+            return `
+                <div class="group relative rounded-xl overflow-hidden bg-surface border border-border hover:border-primary/50 transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer flex flex-col" onclick="playSong(${song.id})">
+                    <div class="aspect-square relative overflow-hidden">
+                        <img src="${song.image}" alt="${song.title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                        <!-- Play button overlay -->
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                                <i class="ph-fill ph-play text-xl ml-1"></i>
+                            </button>
+                        </div>
+                        <div class="absolute bottom-2 right-2 bg-black/70 text-xs px-1.5 py-0.5 rounded font-mono">${song.duration}</div>
+                    </div>
+                    <div class="p-3">
+                        <h3 class="font-semibold text-white truncate text-sm mb-0.5">${song.title}</h3>
+                        <p class="text-xs text-text-muted truncate mb-1">${song.artist}</p>
+                        <p class="text-[10px] text-primary/80 truncate">${song.genre}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createListItemHtml(song) {
+            return `
+                <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface border border-transparent hover:border-border transition-colors group cursor-pointer" onclick="playSong(${song.id})">
+                    <div class="relative w-12 h-12 rounded overflow-hidden shrink-0">
+                        <img src="${song.image}" alt="${song.title}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <i class="ph-fill ph-play text-white"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0 flex flex-col justify-center">
+                        <div class="font-semibold text-white text-sm truncate group-hover:text-primary transition-colors">${song.title}</div>
+                        <div class="flex items-center gap-2 text-xs text-text-muted">
+                            <span class="truncate max-w-[100px] sm:max-w-none">${song.artist}</span>
+                            <span class="hidden sm:inline">&bull;</span>
+                            <span class="truncate hidden sm:inline">${song.genre}</span>
+                        </div>
+                    </div>
+                    <div class="hidden md:flex gap-1">
+                        ${song.tags.slice(0, 2).map(tag => `<span class="text-[10px] bg-surface border border-border px-1.5 py-0.5 rounded text-text-muted">${tag}</span>`).join('')}
+                    </div>
+                    <div class="text-xs font-mono text-text-muted ml-2 shrink-0">${song.duration}</div>
+                    <button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                        <i class="ph ph-dots-three text-xl"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderGrid(containerId, songs) {
+            const container = document.getElementById(containerId);
+            if(container) {
+                container.innerHTML = songs.map(createCardHtml).join('');
+            }
+        }
+
+        function renderList(containerId, songs) {
+            const container = document.getElementById(containerId);
+            if(container) {
+                container.innerHTML = songs.map(createListItemHtml).join('');
+            }
+        }
+
+        // Player Logic
+        function playSong(id) {
+            const index = mockSongs.findIndex(s => s.id === id);
+            if (index !== -1) {
+                currentTrackIndex = index;
+                updatePlayerUI();
+                if (!isPlaying) {
+                    togglePlay();
+                } else {
+                    // Reset progress if already playing and switching track
+                    resetProgress();
+                }
+            }
+        }
+
+        function updatePlayerUI() {
+            if (currentTrackIndex === -1) return;
+            
+            const song = mockSongs[currentTrackIndex];
+            
+            // Update Track Info
+            document.getElementById('playerTitle').textContent = song.title;
+            document.getElementById('playerArtist').textContent = song.artist;
+            document.getElementById('durationTimeDisplay').textContent = song.duration;
+            
+            // Update Cover
+            const coverHtml = `<img src="${song.image}" alt="Cover" class="w-full h-full object-cover">
+                               <div class="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center">
+                                   <i class="ph ph-arrows-out-simple text-white"></i>
+                               </div>`;
+            document.getElementById('playerCover').innerHTML = coverHtml;
+        }
+
+        function togglePlay() {
+            if (currentTrackIndex === -1 && mockSongs.length > 0) {
+                currentTrackIndex = 0;
+                updatePlayerUI();
+            }
+
+            const playIcon = document.getElementById('playIcon');
+            const playBtn = document.getElementById('playPauseBtn');
+            
+            isPlaying = !isPlaying;
+            
+            if (isPlaying) {
+                playIcon.classList.replace('ph-play', 'ph-pause');
+                playIcon.classList.remove('ml-0.5'); // Remove play offset
+                playBtn.classList.add('bg-primary', 'text-white');
+                playBtn.classList.remove('bg-white', 'text-black');
+                startProgress();
+            } else {
+                playIcon.classList.replace('ph-pause', 'ph-play');
+                playIcon.classList.add('ml-0.5');
+                playBtn.classList.remove('bg-primary', 'text-white');
+                playBtn.classList.add('bg-white', 'text-black');
+                stopProgress();
+            }
+        }
+
+        function nextTrack() {
+            if (currentTrackIndex < mockSongs.length - 1) {
+                currentTrackIndex++;
+            } else {
+                currentTrackIndex = 0; // Loop back
+            }
+            updatePlayerUI();
+            resetProgress();
+            if(!isPlaying) togglePlay();
+        }
+
+        function prevTrack() {
+            if (currentProgress > 5) {
+                resetProgress(); // Just restart song if more than 5s in
+            } else {
+                if (currentTrackIndex > 0) {
+                    currentTrackIndex--;
+                } else {
+                    currentTrackIndex = mockSongs.length - 1;
+                }
+                updatePlayerUI();
+                resetProgress();
+                if(!isPlaying) togglePlay();
+            }
+        }
+
+        // Mock Progress Bar Logic
+        function startProgress() {
+            clearInterval(playInterval);
+            const progressBar = document.getElementById('progressBar');
+            const timeDisplay = document.getElementById('currentTimeDisplay');
+            
+            // Assume 100 max value on progress bar equals song duration
+            // Just mocking a constant tick for visual effect
+            playInterval = setInterval(() => {
+                currentProgress += 0.5;
+                if (currentProgress > 100) {
+                    nextTrack(); // Auto play next when done
+                } else {
+                    progressBar.value = currentProgress;
+                    // Mock time display (assuming 3 min average song)
+                    const totalSecs = Math.floor((currentProgress / 100) * 180);
+                    const mins = Math.floor(totalSecs / 60);
+                    const secs = totalSecs % 60;
+                    timeDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function stopProgress() {
+            clearInterval(playInterval);
+        }
+
+        function resetProgress() {
+            currentProgress = 0;
+            document.getElementById('progressBar').value = 0;
+            document.getElementById('currentTimeDisplay').textContent = "0:00";
+            if (isPlaying) {
+                stopProgress();
+                startProgress();
+            }
+        }
+
+        // Handle user seeking on progress bar
+        document.getElementById('progressBar').addEventListener('input', (e) => {
+            currentProgress = parseFloat(e.target.value);
+            // Update time display based on seek
+            const totalSecs = Math.floor((currentProgress / 100) * 180);
+            const mins = Math.floor(totalSecs / 60);
+            const secs = totalSecs % 60;
+            document.getElementById('currentTimeDisplay').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        });
+
+        let generationTimer;
+
+        function generateFromQuickPrompt() {
+            const input = document.getElementById('quickPromptInput').value;
+            if(!input) return; // Don't proceed if empty
+            
+            // Switch to create view, populate prompt, and start gen
+            document.getElementById('mainPromptInput').value = input;
+            switchView('create');
+            simulateGeneration();
+            document.getElementById('quickPromptInput').value = ''; // clear
+        }
+
+        function simulateGeneration() {
+            const prompt = document.getElementById('mainPromptInput').value || "Random generated track";
+            
+            // UI State updates
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('generationStatus').classList.remove('hidden');
+            document.getElementById('generationResult').classList.add('hidden');
+            
+            const progressBar = document.getElementById('genProgressBar');
+            const statusText = document.getElementById('genStatusText');
+            
+            let progress = 0;
+            const stages = [
+                "Analyzing prompt and structure...",
+                "Generating lyrical cadence...",
+                "Composing instrumental backing...",
+                "Synthesizing vocals...",
+                "Mastering and finalizing audio..."
+            ];
+
+            clearInterval(generationTimer);
+            
+            generationTimer = setInterval(() => {
+                progress += Math.random() * 8 + 2; // Random increment
+                if (progress >= 100) progress = 100;
+                
+                progressBar.style.width = `${progress}%`;
+                
+                // Update text based on progress
+                const stageIndex = Math.min(Math.floor((progress / 100) * stages.length), stages.length - 1);
+                statusText.textContent = `${stages[stageIndex]} (${Math.floor(progress)}%)`;
+
+                if (progress === 100) {
+                    clearInterval(generationTimer);
+                    setTimeout(() => completeGeneration(prompt), 500); // Small delay before showing result
+                }
+            }, 800);
+        }
+
+        function cancelGeneration() {
+            clearInterval(generationTimer);
+            document.getElementById('generateBtn').disabled = false;
+            document.getElementById('generationStatus').classList.add('hidden');
+            
+            // Reset progress bar
+            const progressBar = document.getElementById('genProgressBar');
+            progressBar.style.width = "0%";
+            document.getElementById('genStatusText').textContent = "Cancelled.";
+        }
+
+        function completeGeneration(prompt) {
+            document.getElementById('generationStatus').classList.add('hidden');
+            document.getElementById('generationResult').classList.remove('hidden');
+            document.getElementById('generateBtn').disabled = false;
+
+            // Create a mock new song
+            const newId = Date.now();
+            const tags = prompt.split(' ').filter(w => w.length > 4).slice(0, 2);
+            if(tags.length === 0) tags.push("AI Generated");
+
+            const newSong = {
+                id: newId,
+                title: prompt.split(' ').slice(0, 3).join(' ') || "New Masterpiece",
+                artist: "@user (You)",
+                genre: "Custom Generation",
+                duration: document.getElementById('durationDisplay').textContent || "2:00",
+                image: `https://placehold.co/400x400/a855f7/000000?text=New\nTrack`,
+                tags: tags
+            };
+
+            // Add to mock data
+            mockSongs.unshift(newSong);
+
+            // Render result
+            const resultHtml = `
+                <div class="bg-surface border border-primary/30 p-4 rounded-xl mb-4 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-2">
+                        <span class="bg-primary/20 text-primary text-xs px-2 py-1 rounded font-bold">NEW</span>
+                    </div>
+                    ${createListItemHtml(newSong)}
+                    <div class="mt-4 flex gap-2 pl-14">
+                        <button onclick="playSong(${newId})" class="bg-white text-black text-sm px-4 py-1.5 rounded-full font-medium hover:bg-gray-200 transition-colors">
+                            <i class="ph-fill ph-play mr-1"></i> Play
+                        </button>
+                        <button class="bg-surface-hover text-white text-sm px-4 py-1.5 rounded-full border border-border hover:border-text-muted transition-colors">
+                            <i class="ph ph-share-network mr-1"></i> Share
+                        </button>
+                        <button class="bg-surface-hover text-white text-sm px-4 py-1.5 rounded-full border border-border hover:border-text-muted transition-colors">
+                            <i class="ph ph-download-simple mr-1"></i> Stem dl
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('newGeneratedSongContainer').innerHTML = resultHtml;
+            
+            // Re-render recent list to show new song
+            renderList('recentList', mockSongs.slice(0, 4));
+        }
+    </script>
+</body>
+</html>
