@@ -1,0 +1,21 @@
+{
+  "name": "symphony-ai-music",
+  "version": "1.0.0",
+  "description": "AI-powered music generator",
+  "main": "ai_music_studio.html",
+  "scripts": {
+    "build": "echo 'Static HTML - no build needed'",
+    "dev": "npx serve .",
+    "lint": "echo 'No linter configured'"
+  },
+  "keywords": [
+    "music",
+    "ai",
+    "generator"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
