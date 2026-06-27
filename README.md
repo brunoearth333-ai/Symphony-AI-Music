@@ -1,0 +1,1 @@
+I created Symphony AI Music, an AI-powered music project that combines technology and creativity to generate original musical experiences. It represents my exploration of how artificial intelligence can inspire new forms of composition, sound creation, and artistic expression.
